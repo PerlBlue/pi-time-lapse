@@ -1,50 +1,78 @@
 from picamera import PiCamera
 from config import config
-from pathMaker import PathMaker
 from datetime import datetime
 
 import os
 import time
 import glob
+import subprocess
+
 
 class Capture:
-    def __init__(self, config, path_maker):
+    def __init__(self, config):
         self.camera = PiCamera()
         self.camera.resolution = (int(config["width"]), int(config["height"]))
-        self.camera.meter_mode = "backlit"
+        self.camera.meter_mode = "backlit"                      # Set to maximum central region
         self.config = config
-        self.path_maker = path_maker
 
     def take(self):
         names = []
-        start = time.time()
-#        self.camera.start_preview()
 
         now = datetime.now()
-        folder = self.path_maker.prepare_dir("/var/image", now)
+        base_name = time.strftime("%y%m%d-%H%M")
 
-        base_name = str(time.time()).replace(".", "_")
-#        evs = [-25, -10, 0, 10, 25]
-        evs = [0, 0, 0, 0, 0]
+        #self.camera.start_preview()
+        time.sleep(2)
+        name = "/var/image/img_"+base_name+"_X.jpg"
+        self.camera.capture(name)
+        time.sleep(0.5)
+        names.append(name)
+        
+        evs = [-25, -10, 0, 10, 25]
         i = 0
         for ev in evs:
+            self.camera.exposure_compensation = ev
+            
             print("EV: " + str(ev))
-            name = "slice_"+base_name + "_" + str(i)+ ".jpg"
+            name = "/var/image/img_"+base_name + "_" + str(i) + ".jpg"
             print("IMAGE: "+name)
+
             self.camera.capture(name)
-#            time.sleep(0.5)
+            time.sleep(0.5)
             names.append(name)
             i = i + 1
-#        self.camera.stop_preview()
 
-        end = time.time()
-        return (names, (end-start))
+        #self.camera.stop_preview()
+        return names
+
+    def transfer(self, names):
+        print("Files: "+ ' '.join(names))
+
+        for name in names:
+            MyOut = subprocess.Popen(['scp', name, 'icydee@icydee.co.uk:/home/icydee/sandbox2/picamera/images'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT)
+            stdout,stderr = MyOut.communicate()
+            print(stdout)
+            print(stderr)
+
+            os.remove(name)
+            print("REMOVE: "+name)
+            print("remove file "+name)
+
 
 if __name__ == "__main__":
-    capture = Capture(config, PathMaker())
+    start = time.time()
+
+    capture = Capture(config)
     files = capture.take()
-    print("Duration: " + str(files[1]) + "s")
-    time.sleep(1)
+    capture.transfer(files)
+
+    end = time.time()
+
+    print("Duration: " + str(end - start) + "s")
+
+
         
 
 

@@ -7,6 +7,6 @@ config["flip_vertical"] = False
 config["metering_mode"] = "matrix"
 
 config["base_path"] = "/var/image"
-config["height"] = 1536
-config["width"] = 2048
+config["height"] = 1944
+config["width"] = 2592
 config["quality"] = 35
